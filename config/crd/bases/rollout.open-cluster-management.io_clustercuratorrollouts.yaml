@@ -1,0 +1,466 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: clustercuratorrollouts.rollout.open-cluster-management.io
+spec:
+  group: rollout.open-cluster-management.io
+  names:
+    kind: ClusterCuratorRollout
+    listKind: ClusterCuratorRolloutList
+    plural: clustercuratorrollouts
+    shortNames:
+    - ccr
+    - ccrollout
+    singular: clustercuratorrollout
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .spec.openShiftVersion
+      name: Target Version
+      type: string
+    - jsonPath: .status.totalCounts.total
+      name: Total
+      type: integer
+    - jsonPath: .status.totalCounts.pending
+      name: Pending
+      type: integer
+    - jsonPath: .status.totalCounts.inProgress
+      name: InProgress
+      type: integer
+    - jsonPath: .status.totalCounts.completed
+      name: Completed
+      type: integer
+    - jsonPath: .status.totalCounts.failed
+      name: Failed
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ClusterCuratorRollout is the Schema for the clustercuratorrollouts API.
+          It orchestrates the upgrade of OpenShift clusters using ClusterCurator CRDs
+          in a hierarchical, controlled manner supporting up to 4000+ clusters.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              ClusterCuratorRolloutSpec defines the desired state of ClusterCuratorRollout.
+              The spec embeds SelectionSpec to allow recursive nesting of selection strategies.
+            enum:
+            - continue
+            - pause
+            - abort
+            - retry
+            - rollback
+            properties:
+              children:
+                description: |-
+                  Children contains nested selection specs for hierarchical rollout strategies
+                  Each child inherits the filtering from its parent
+                items: {}
+                type: array
+              labelSelector:
+                description: |-
+                  LabelSelector is used differently based on the selection type:
+                  - For type "group": Only the matchLabels keys are used to group clusters by those label keys.
+                    The values are ignored and clusters are grouped by unique values of those keys.
+                  - For type "filter": The full label selector is used to filter clusters.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              onlyUpgradeFromOpenShiftVersion:
+                description: |-
+                  OnlyUpgradeFromOpenShiftVersion restricts upgrades to only clusters
+                  currently running this specific version
+                type: string
+              openShiftVersion:
+                description: OpenShiftVersion is the target OpenShift version to upgrade
+                  clusters to
+                pattern: ^\d+\.\d+(\.\d+)?$
+                type: string
+              placementRef:
+                description: |-
+                  PlacementRef references an existing Placement resource
+                  Required when type is "placement"
+                properties:
+                  name:
+                    description: Name is the name of the Placement resource
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the Placement resource
+                      If not specified, defaults to the ClusterCuratorRollout's namespace
+                    type: string
+                required:
+                - name
+                type: object
+              rollout:
+                description: Rollout defines the rollout strategy for this selection
+                  level
+                properties:
+                  concurrency:
+                    description: Concurrency defines the concurrency settings for
+                      the rollout
+                    properties:
+                      type:
+                        default: percent
+                        description: Type specifies how the concurrency value is interpreted
+                        enum:
+                        - percent
+                        - count
+                        type: string
+                      value:
+                        default: 0
+                        description: |-
+                          Value is the concurrency value (percentage or absolute count)
+                          A value of 0 means no concurrency (sequential)
+                        type: integer
+                    type: object
+                type: object
+              type:
+                description: |-
+                  Type defines the selection type: group, filter, or placement
+                  - group: Groups clusters by a label key, generating placements for each unique value
+                  - filter: Filters clusters using a full label selector
+                  - placement: Uses an existing Placement resource
+                enum:
+                - group
+                - filter
+                - placement
+                type: string
+            required:
+            - openShiftVersion
+            - type
+            type: object
+          status:
+            description: |-
+              ClusterCuratorRolloutStatus defines the observed state of ClusterCuratorRollout.
+
+              Design for 4000+ clusters:
+              - Only store aggregate counts (fixed size regardless of cluster count)
+              - Only store details for failed clusters (typically small subset)
+              - Only store details for in-progress clusters (bounded by concurrency settings)
+              - Reference PlacementDecisions for full cluster lists
+
+              Estimated max size: ~50KB for 100 placements + 100 failed + 50 in-progress
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the rollout's state
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              failedClusters:
+                description: |-
+                  FailedClusters contains details only for clusters that failed upgrade
+                  This list is bounded - in a healthy rollout, it should be empty or small
+                  If there are more than MaxFailedClusterDetails failures, only the most recent are shown
+                items:
+                  description: |-
+                    FailedClusterInfo contains minimal info about a failed cluster for troubleshooting
+                    Only failed clusters are stored individually (typically a small subset)
+                    Size: ~150 bytes per failed cluster
+                  properties:
+                    currentVersion:
+                      description: CurrentVersion is the cluster's current OpenShift
+                        version
+                      type: string
+                    failedAt:
+                      description: FailedAt is when the failure was detected
+                      format: date-time
+                      type: string
+                    failureReason:
+                      description: FailureReason provides a brief description of why
+                        the upgrade failed
+                      type: string
+                    name:
+                      description: Name is the name of the cluster
+                      type: string
+                    placementName:
+                      description: PlacementName is the placement that selected this
+                        cluster
+                      type: string
+                  required:
+                  - currentVersion
+                  - failureReason
+                  - name
+                  - placementName
+                  type: object
+                type: array
+              inProgressClusters:
+                description: |-
+                  InProgressClusters contains details for clusters currently being upgraded
+                  This list is bounded by the concurrency settings
+                items:
+                  description: |-
+                    InProgressClusterInfo contains minimal info about a cluster being upgraded
+                    Size: ~100 bytes per in-progress cluster
+                  properties:
+                    name:
+                      description: Name is the name of the cluster
+                      type: string
+                    placementName:
+                      description: PlacementName is the placement that selected this
+                        cluster
+                      type: string
+                    startedAt:
+                      description: StartedAt is when the upgrade started
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - placementName
+                  type: object
+                type: array
+              lastReconcileDuration:
+                description: |-
+                  LastReconcileDuration is how long the last reconciliation took
+                  Useful for monitoring performance with large cluster counts
+                type: string
+              lastReconcileError:
+                description: LastReconcileError contains the error from the last reconciliation
+                  if any
+                type: string
+              lastReconcileTime:
+                description: LastReconcileTime is the timestamp of the last reconciliation
+                format: date-time
+                type: string
+              message:
+                description: Message provides a human-readable summary of the current
+                  state
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the generation of the spec that
+                  was last processed
+                format: int64
+                type: integer
+              phase:
+                description: Phase indicates the current phase of the rollout
+                type: string
+              placements:
+                description: |-
+                  Placements contains the status of all placements (generated or referenced)
+                  Each placement includes aggregate counts, not individual cluster details
+                items:
+                  description: |-
+                    PlacementStatus tracks the status of a generated or referenced Placement
+                    Size: ~200 bytes per placement (manageable even with 100s of placements)
+                  properties:
+                    counts:
+                      description: Counts contains cluster counts by upgrade state
+                        for this placement
+                      properties:
+                        completed:
+                          description: Completed is the number of clusters that completed
+                            upgrade
+                          type: integer
+                        failed:
+                          description: Failed is the number of clusters that failed
+                            upgrade
+                          type: integer
+                        inProgress:
+                          description: InProgress is the number of clusters currently
+                            upgrading
+                          type: integer
+                        pending:
+                          description: Pending is the number of clusters pending upgrade
+                          type: integer
+                        skipped:
+                          description: Skipped is the number of clusters that were
+                            skipped
+                          type: integer
+                        total:
+                          description: Total is the total number of clusters
+                          type: integer
+                      required:
+                      - completed
+                      - failed
+                      - inProgress
+                      - pending
+                      - skipped
+                      - total
+                      type: object
+                    generated:
+                      description: Generated indicates whether this placement was
+                        generated by the controller
+                      type: boolean
+                    groupKey:
+                      description: GroupKey is the label key used to create this placement
+                        (for group type)
+                      type: string
+                    groupValue:
+                      description: GroupValue is the label value used to create this
+                        placement (for group type)
+                      type: string
+                    lastUpdated:
+                      description: LastUpdated is the last time this placement status
+                        was updated
+                      format: date-time
+                      type: string
+                    name:
+                      description: Name is the name of the Placement
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the Placement
+                      type: string
+                  required:
+                  - counts
+                  - generated
+                  - name
+                  - namespace
+                  type: object
+                type: array
+              totalCounts:
+                description: TotalCounts provides aggregate counts across all placements
+                properties:
+                  completed:
+                    description: Completed is the number of clusters that completed
+                      upgrade
+                    type: integer
+                  failed:
+                    description: Failed is the number of clusters that failed upgrade
+                    type: integer
+                  inProgress:
+                    description: InProgress is the number of clusters currently upgrading
+                    type: integer
+                  pending:
+                    description: Pending is the number of clusters pending upgrade
+                    type: integer
+                  skipped:
+                    description: Skipped is the number of clusters that were skipped
+                    type: integer
+                  total:
+                    description: Total is the total number of clusters
+                    type: integer
+                required:
+                - completed
+                - failed
+                - inProgress
+                - pending
+                - skipped
+                - total
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

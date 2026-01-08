@@ -1,0 +1,62 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - cluster.open-cluster-management.io
+  resources:
+  - managedclusters
+  - managedclustersetbindings
+  - managedclustersets
+  - placementdecisions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.open-cluster-management.io
+  resources:
+  - placements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rollout.open-cluster-management.io
+  resources:
+  - clustercuratorrollouts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rollout.open-cluster-management.io
+  resources:
+  - clustercuratorrollouts/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rollout.open-cluster-management.io
+  resources:
+  - clustercuratorrollouts/status
+  verbs:
+  - get
+  - patch
+  - update

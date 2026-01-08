@@ -1,0 +1,103 @@
+# Example ClusterCuratorRollout that demonstrates hierarchical grouping and filtering
+# 
+# This example:
+# 1. Groups clusters by the "region" label (e.g., US, CAN, EU)
+# 2. Within each region, filters to only "clusterrole=production" clusters
+# 
+# This generates placements like:
+#   - my-rollout-region-us-clusterrole-production
+#   - my-rollout-region-can-clusterrole-production
+#   - my-rollout-region-eu-clusterrole-production
+#
+apiVersion: rollout.open-cluster-management.io/v1alpha1
+kind: ClusterCuratorRollout
+metadata:
+  name: production-upgrade-4-15
+  namespace: open-cluster-management
+  labels:
+    app.kubernetes.io/name: clustercuratorrollout
+    app.kubernetes.io/part-of: cluster-curator-rollout-controller
+spec:
+  # Target OpenShift version for the upgrade
+  openShiftVersion: "4.15.3"
+  
+  # Optionally, only upgrade clusters currently at this version
+  onlyUpgradeFromOpenShiftVersion: "4.14"
+  
+  # Top-level selection: group by region
+  type: group
+  labelSelector:
+    matchLabels:
+      region: ""  # The value is ignored for "group" type - only the key matters
+  
+  # Rollout settings for regional groups (not implemented yet)
+  rollout:
+    concurrent:
+      type: count
+      value: 1  # Process one region at a time
+  
+  # Within each region, filter to production clusters
+  children:
+    - type: filter
+      labelSelector:
+        matchLabels:
+          clusterrole: production
+      # Rollout settings for clusters within each region
+      rollout:
+        concurrent:
+          type: percent
+          value: 25  # Upgrade 25% of clusters concurrently
+
+---
+# Simple example using a direct placement reference
+apiVersion: rollout.open-cluster-management.io/v1alpha1
+kind: ClusterCuratorRollout
+metadata:
+  name: simple-placement-rollout
+  namespace: open-cluster-management
+spec:
+  openShiftVersion: "4.15.3"
+  
+  # Use an existing Placement resource
+  type: placement
+  placementRef:
+    name: my-existing-placement
+    namespace: open-cluster-management
+
+---
+# Example with nested grouping: Environment -> Region -> Tier
+apiVersion: rollout.open-cluster-management.io/v1alpha1
+kind: ClusterCuratorRollout
+metadata:
+  name: nested-group-rollout
+  namespace: open-cluster-management
+spec:
+  openShiftVersion: "4.15.3"
+  
+  # First, filter to only production environment
+  type: filter
+  labelSelector:
+    matchLabels:
+      environment: production
+  
+  children:
+    # Then group by region
+    - type: group
+      labelSelector:
+        matchLabels:
+          region: ""  # Group by region
+      rollout:
+        concurrent:
+          type: count
+          value: 1  # One region at a time
+      
+      children:
+        # Finally, within each region, group by tier
+        - type: group
+          labelSelector:
+            matchLabels:
+              tier: ""  # Group by tier (critical, standard, etc.)
+          rollout:
+            concurrent:
+              type: percent
+              value: 50  # 50% of each tier concurrently

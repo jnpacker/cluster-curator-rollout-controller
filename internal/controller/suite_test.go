@@ -32,6 +32,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
+	clusterv1beta1 "open-cluster-management.io/api/cluster/v1beta1"
+
 	rolloutv1alpha1 "github.com/stolostron/cluster-curator-rollout-controller/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -60,6 +63,12 @@ var _ = BeforeSuite(func() {
 
 	var err error
 	err = rolloutv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = clusterv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = clusterv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

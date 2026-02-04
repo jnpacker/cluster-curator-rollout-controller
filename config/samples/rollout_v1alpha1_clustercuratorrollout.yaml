@@ -1,10 +1,17 @@
-# Example ClusterCuratorRollout that demonstrates hierarchical grouping and filtering
-# 
+# Example ClusterCuratorRollout demonstrating the new group/filter model
+#
+# NEW MODEL:
+# - "group" is a branching point that must have "filter" children
+# - "filter" adds label predicates; creates a Placement when it has no children (leaf)
+# - Order of filter children defines rollout priority (no need for groupByPriorityOrder)
+# - soakDuration on filter: wait after all filtered clusters complete before next sibling
+# - concurrency.soakDuration: wait between each concurrent batch of clusters
+#
 # This example:
-# 1. Groups clusters by the "region" label (e.g., US, CAN, EU)
+# 1. Groups clusters by the "region" label
 # 2. Within each region, filters to only "clusterrole=production" clusters
-# 
-# This generates placements like:
+#
+# Expected Placements:
 #   - my-rollout-region-us-clusterrole-production
 #   - my-rollout-region-can-clusterrole-production
 #   - my-rollout-region-eu-clusterrole-production
@@ -20,33 +27,63 @@ metadata:
 spec:
   # Target OpenShift version for the upgrade
   openShiftVersion: "4.15.3"
-  
-  # Optionally, only upgrade clusters currently at this version
-  onlyUpgradeFromOpenShiftVersion: "4.14"
-  
-  # Top-level selection: group by region
+
+  # Optionally, only upgrade clusters currently at one of these versions
+  onlyUpgradeFromOpenShiftVersions:
+    - "4.14"      # Matches all 4.14.x clusters
+
+  # Top-level: group by region
   type: group
-  labelSelector:
-    matchLabels:
-      region: ""  # The value is ignored for "group" type - only the key matters
-  
-  # Rollout settings for regional groups (not implemented yet)
-  rollout:
-    concurrent:
-      type: count
-      value: 1  # Process one region at a time
-  
-  # Within each region, filter to production clusters
+  groupByLabelKey: region
+
   children:
+    # US region first (1st priority)
     - type: filter
       labelSelector:
         matchLabels:
-          clusterrole: production
-      # Rollout settings for clusters within each region
-      rollout:
-        concurrent:
-          type: percent
-          value: 25  # Upgrade 25% of clusters concurrently
+          region: US
+      soakDuration: 48h  # Wait 48h after US completes before CAN
+
+      children:
+        - type: filter
+          labelSelector:
+            matchLabels:
+              clusterrole: production
+          concurrency:
+            type: percent
+            value: 25  # Upgrade 25% of clusters concurrently
+
+    # Canada region second (2nd priority)
+    - type: filter
+      labelSelector:
+        matchLabels:
+          region: CAN
+      soakDuration: 24h  # Wait 24h after CAN completes before EU
+
+      children:
+        - type: filter
+          labelSelector:
+            matchLabels:
+              clusterrole: production
+          concurrency:
+            type: percent
+            value: 25
+
+    # EU region last (3rd priority - no soak after)
+    - type: filter
+      labelSelector:
+        matchLabels:
+          region: EU
+      # No soakDuration - last region
+
+      children:
+        - type: filter
+          labelSelector:
+            matchLabels:
+              clusterrole: production
+          concurrency:
+            type: percent
+            value: 25
 
 ---
 # Simple example using a direct placement reference
@@ -57,7 +94,7 @@ metadata:
   namespace: open-cluster-management
 spec:
   openShiftVersion: "4.15.3"
-  
+
   # Use an existing Placement resource
   type: placement
   placementRef:
@@ -65,39 +102,32 @@ spec:
     namespace: open-cluster-management
 
 ---
-# Example with nested grouping: Environment -> Region -> Tier
+# Example with filter -> filter (nested filters without group)
+# This creates a single placement with combined predicates
 apiVersion: rollout.open-cluster-management.io/v1alpha1
 kind: ClusterCuratorRollout
 metadata:
-  name: nested-group-rollout
+  name: nested-filter-rollout
   namespace: open-cluster-management
 spec:
   openShiftVersion: "4.15.3"
-  
+
   # First, filter to only production environment
   type: filter
   labelSelector:
     matchLabels:
       environment: production
-  
+
   children:
-    # Then group by region
-    - type: group
+    # Then filter to only us-east region
+    - type: filter
       labelSelector:
         matchLabels:
-          region: ""  # Group by region
-      rollout:
-        concurrent:
-          type: count
-          value: 1  # One region at a time
-      
-      children:
-        # Finally, within each region, group by tier
-        - type: group
-          labelSelector:
-            matchLabels:
-              tier: ""  # Group by tier (critical, standard, etc.)
-          rollout:
-            concurrent:
-              type: percent
-              value: 50  # 50% of each tier concurrently
+          region: us-east
+      concurrency:
+        type: count
+        value: 1  # One cluster at a time
+        soakDuration: 1h  # Wait 1h between each cluster
+
+# This creates a single Placement with predicates:
+#   environment=production AND region=us-east

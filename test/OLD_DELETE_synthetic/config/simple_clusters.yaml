@@ -1,0 +1,16 @@
+# Simple Synthetic ClusterCuratorRollout Test Configuration
+# 10 clusters with basic environment labeling
+
+totalClusters: 10
+
+labels:
+  # Basic environment distribution
+  - key: "environment"
+    values:
+      - value: "production"
+        percentage: 60
+      - value: "staging"
+        percentage: 40
+
+
+

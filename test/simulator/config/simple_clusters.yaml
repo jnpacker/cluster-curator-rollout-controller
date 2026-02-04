@@ -1,0 +1,26 @@
+# Simple Synthetic ClusterCuratorRollout Test Configuration
+# 10 clusters with basic environment labeling
+
+testID: "infra-b47da36dbd23-984900"
+totalClusters: 100
+
+# OpenShift base versions - randomly distributed across clusters
+baseVersions:
+  - version: "4.14.12"
+    percentage: 50
+  - version: "4.14.15"
+    percentage: 30
+  - version: "4.15.3"
+    # No percentage = remaining 20%
+
+labels:
+  # Basic environment distribution
+  - key: "environment"
+    values:
+      - value: "production"
+        percentage: 60
+      - value: "staging"
+        percentage: 40
+
+
+

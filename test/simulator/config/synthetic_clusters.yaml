@@ -1,0 +1,62 @@
+# Synthetic ClusterCuratorRollout Test Configuration
+# This configuration file defines how to distribute labels across synthetic clusters
+
+totalClusters: 100
+
+labels:
+  # Root level: Environment distribution
+  # 60% production, 30% staging, 10% dev
+  - key: "environment"
+    values:
+      - value: "production"
+        percentage: 20
+      - value: "staging"
+        percentage: 10
+      - value: "dev"
+        # No percentage - gets remaining 10%
+
+  # Region: Applied to all clusters with environment key
+  # Distributed equally: 50% us-east, 50% us-west
+  - key: "region"
+    parentKey: "environment"
+    values:
+      - value: "us-east"
+        percentage: 50
+      - value: "us-west"
+        percentage: 50
+
+  # Tier: Applied to production environment only (60 clusters)
+  # 40% premium, 40% standard, 20% basic
+  - key: "tier"
+    parentKey: "environment"
+    parentValue: "production"
+    values:
+      - value: "premium"
+        percentage: 40
+      - value: "standard"
+        percentage: 40
+      - value: "basic"
+        # Remaining 20%
+
+  # GPU Support: Applied to premium tier only (40 clusters: 40% of 60 prod)
+  # 100% have GPU support
+  - key: "gpu-support"
+    parentKey: "tier"
+    parentValue: "premium"
+    values:
+      - value: "true"
+        # No percentage specified, so 100%
+
+  # High Availability: Applied to production only (60 clusters)
+  # 80% support HA, 20% do not
+  - key: "high-availability"
+    parentKey: "environment"
+    parentValue: "production"
+    values:
+      - value: "enabled"
+        percentage: 80
+      - value: "disabled"
+        # Remaining 20%
+
+
+

@@ -1,0 +1,115 @@
+{
+  "totalClusters": 100,
+  "labels": [
+    {
+      "key": "environment",
+      "values": [
+        {
+          "value": "production",
+          "percentage": 20
+        },
+        {
+          "value": "staging",
+          "percentage": 10
+        },
+        {
+          "value": "dev"
+        }
+      ]
+    },
+    {
+      "key": "region",
+      "parentKey": "environment",
+      "values": [
+        {
+          "value": "us-east",
+          "percentage": 50
+        },
+        {
+          "value": "us-west",
+          "percentage": 50
+        }
+      ]
+    },
+    {
+      "key": "tier",
+      "parentKey": "environment",
+      "parentValue": "production",
+      "values": [
+        {
+          "value": "premium",
+          "percentage": 40
+        },
+        {
+          "value": "standard",
+          "percentage": 40
+        },
+        {
+          "value": "basic"
+        }
+      ]
+    },
+    {
+      "key": "gpu-support",
+      "parentKey": "tier",
+      "parentValue": "premium",
+      "values": [
+        {
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "key": "high-availability",
+      "parentKey": "environment",
+      "parentValue": "production",
+      "values": [
+        {
+          "value": "enabled",
+          "percentage": 80
+        },
+        {
+          "value": "disabled"
+        }
+      ]
+    },
+    {
+      "key": "canary",
+      "parentKey": "environment",
+      "parentValue": "staging",
+      "values": [
+        {
+          "value": "true",
+          "percentage": 40
+        },
+        {
+          "value": "false"
+        }
+      ]
+    }
+  ],
+  "baseVersions": [
+    {
+      "version": "4.14.10",
+      "percentage": 25
+    },
+    {
+      "version": "4.14.12",
+      "percentage": 25
+    },
+    {
+      "version": "4.14.15",
+      "percentage": 20
+    },
+    {
+      "version": "4.15.3",
+      "percentage": 15
+    },
+    {
+      "version": "4.15.5",
+      "percentage": 15
+    }
+  ],
+  "failurePercentage": 2,
+  "upgradeTimeSeconds": 60
+}
